@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    borrow::Borrow,
+    time::{Duration, Instant},
+};
 
 use bevy::{
     math::{vec2, vec3},
@@ -6,7 +9,7 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::Collider;
+use crate::{asteroids::Asteroid, Heart};
 
 const PLAYER_MOVEMENT_SPEED: f32 = 600.0;
 const SPACESHIP_SIZE: f32 = 80.0;
@@ -42,7 +45,6 @@ pub fn spawn_spaceship(commands: &mut Commands, texture: Handle<Image>, win: &Wi
             reload_instant: None,
             ammunition: 60,
         },
-        Collider,
     ));
 }
 
@@ -83,7 +85,6 @@ pub fn player_inputs(
                         ..default()
                     },
                     Fire,
-                    Collider,
                 ));
                 player.1.click_instant = Instant::now();
                 player.1.ammunition -= 1;
@@ -122,6 +123,61 @@ pub fn update_ammunition(mut player_query: Query<&mut Player, With<Player>>) {
             if inst.elapsed() > Duration::from_secs(2) {
                 player.reload_instant = None;
                 player.ammunition = 60;
+            }
+        }
+    }
+}
+
+pub fn detect_player_collision(
+    mut commands: Commands,
+    mut query: ParamSet<(
+        Query<&Transform, With<Player>>,
+        Query<&mut Transform, With<Asteroid>>,
+    )>,
+    mut hearts_query: Query<Entity, With<Heart>>,
+    win_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Ok(win) = win_query.get_single() {
+        if let Ok(player) = query.p0().get_single() {
+            let player_coords = player.translation.truncate();
+            let player_radius = SPACESHIP_SIZE / 2.;
+
+            for mut asteroid in query.p1().iter_mut() {
+                let asteroid_coords = asteroid.translation.truncate();
+                let asteroid_radius = asteroid.scale.x / 2.;
+                let distance = player_coords.distance(asteroid_coords);
+
+                if distance < player_radius + asteroid_radius {
+                    asteroid.translation.y = win.height() / 2.;
+
+                    let mut hearts = hearts_query.iter_mut().collect::<Vec<_>>();
+                    if let Some(heart) = hearts.last_mut() {
+                        commands.entity(*heart).despawn();
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn detect_bullet_collision(
+    mut commands: Commands,
+    bullets_query: Query<(&Transform, Entity), (With<Fire>, Without<Asteroid>)>,
+    mut asteroids_query: Query<&mut Transform, (With<Asteroid>, Without<Fire>)>,
+    win_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Ok(win) = win_query.get_single() {
+        for bullet in bullets_query.iter() {
+            let bullet_coords = bullet.0.translation.xy();
+            let bullet_radius = bullet.0.scale.x / 2.;
+            for mut asteroid in asteroids_query.iter_mut() {
+                let asteroid_coords = asteroid.translation.truncate();
+                let asteroid_radius = asteroid.scale.x / 2.;
+                let distance = bullet_coords.distance(asteroid_coords);
+                if distance < bullet_radius + asteroid_radius {
+                    commands.entity(bullet.1).despawn();
+                    asteroid.translation.y = win.height() / 2. + 10.
+                }
             }
         }
     }

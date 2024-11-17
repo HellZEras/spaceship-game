@@ -1,4 +1,3 @@
-use crate::Collider;
 use bevy::{
     math::{vec2, vec3},
     prelude::*,
@@ -10,7 +9,6 @@ pub struct Asteroid;
 
 #[derive(Component)]
 pub struct Velocity {
-    pub initial_direction: f32,
     pub speed: f32,
     pub direction_x: f32,
 }
@@ -38,9 +36,7 @@ pub fn spawn_asteroids(commands: &mut Commands, texture: Handle<Image>, win: &Wi
                 ..default()
             },
             Asteroid,
-            Collider,
             Velocity {
-                initial_direction: falling_x,
                 speed: falling_speed,
                 direction_x: falling_x,
             },
@@ -64,16 +60,12 @@ pub fn replace_asteroids(
     win_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     if let Ok(win) = win_query.get_single() {
-        for (mut transform, velocity) in query.iter_mut() {
-            // Check if the asteroid has dropped out of view at the bottom
-            if transform.translation.y < -win.resolution.height() / 2. {
-                // Reposition the asteroid to the top of the screen
-                transform.translation.y = win.resolution.height() / 2.;
-            }
-            if transform.translation.x > win.resolution.width() / 2.
-                || transform.translation.x < -win.resolution.width() / 2.
-            {
-                transform.translation.x = velocity.initial_direction;
+        for (mut transform, _) in query.iter_mut() {
+            if transform.translation.y < -win.height() / 2. {
+                let mut rng = rand::thread_rng();
+                let x = rng.gen_range(-win.width() + 5. / 2.0..win.width() / 2. - 5.);
+                transform.translation.y = win.height() / 2.;
+                transform.translation.x = x;
             }
         }
     }

@@ -7,9 +7,7 @@ use bevy::{
 use crate::Player;
 
 #[derive(Component)]
-pub struct ReLoadingText {
-    done: bool,
-}
+pub struct ReLoadingText;
 #[derive(Component)]
 pub struct AmmoText;
 
@@ -18,6 +16,12 @@ pub struct AmmoIcon;
 
 #[derive(Component)]
 pub struct Heart;
+
+#[derive(Component)]
+pub struct GameOverButton;
+
+#[derive(Component)]
+pub struct GameOverText;
 
 pub fn spawn_ammo_icon(commands: &mut Commands, texture: Handle<Image>, win: &Window) {
     commands.spawn((
@@ -61,7 +65,6 @@ pub fn spawn_ammo_text(commands: &mut Commands) {
         TextBundle::from(TextSection::new(
             "60",
             TextStyle {
-                // This font is loaded and will be used instead of the default font.
                 font_size: 40.0,
                 ..default()
             },
@@ -134,38 +137,137 @@ pub fn update_hearts_pos(
 }
 
 pub fn spawn_reloading_text(commands: &mut Commands) {
-    commands.spawn((
-        TextBundle::from(TextSection::new(
-            "",
-            TextStyle {
-                font_size: 40.0,
-                ..default()
-            },
-        ))
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            bottom: Val::Px(5.0),
-            right: Val::Px(130.0),
+    let mut text_bundle = TextBundle::from(TextSection::new(
+        "Reloading",
+        TextStyle {
+            font_size: 40.0,
             ..default()
-        }),
-        ReLoadingText { done: false },
-    ));
+        },
+    ))
+    .with_style(Style {
+        position_type: PositionType::Absolute,
+        bottom: Val::Px(5.0),
+        right: Val::Px(130.0),
+        ..default()
+    });
+    text_bundle.visibility = Visibility::Hidden;
+    commands.spawn((text_bundle, ReLoadingText));
 }
 
 pub fn update_reloading_text(
     player_query: Query<&Player, With<Player>>,
-    mut reloading_text_query: Query<(&mut Text, &mut ReLoadingText), With<ReLoadingText>>,
+    mut reloading_text_query: Query<&mut Visibility, With<ReLoadingText>>,
 ) {
     if let Ok(player) = player_query.get_single() {
-        if let Ok(mut reloading_text) = reloading_text_query.get_single_mut() {
+        if let Ok(mut reloading_text_visibility) = reloading_text_query.get_single_mut() {
             if player.ammunition == 0 {
-                if !reloading_text.1.done {
-                    reloading_text.0.sections[0].value.push_str("Reloading...");
-                    reloading_text.1.done = true;
-                }
+                *reloading_text_visibility = Visibility::Visible;
             } else {
-                reloading_text.0.sections[0].value.clear();
-                reloading_text.1.done = false;
+                *reloading_text_visibility = Visibility::Hidden;
+            }
+        }
+    }
+}
+
+pub fn spawn_game_over_text(commands: &mut Commands) {
+    let mut text_bundle = TextBundle::from(TextSection::new(
+        "Game Over",
+        TextStyle {
+            font_size: 40.0,
+            ..default()
+        },
+    ))
+    .with_style(Style {
+        position_type: PositionType::Absolute,
+        align_self: AlignSelf::Center,
+        top: Val::Percent(40.0),
+        margin: UiRect {
+            left: Val::Auto,
+            right: Val::Auto,
+            top: Val::Auto,
+            bottom: Val::Auto,
+        },
+        ..default()
+    });
+    text_bundle.visibility = Visibility::Hidden;
+    commands.spawn((text_bundle, GameOverText));
+}
+
+pub fn spawn_restart_button(commands: &mut Commands) {
+    commands
+        .spawn(ButtonBundle {
+            style: Style {
+                width: Val::Auto,
+                height: Val::Auto,
+                position_type: PositionType::Absolute,
+                align_self: AlignSelf::Center,
+                margin: UiRect::all(Val::Auto),
+                ..default()
+            },
+            background_color: BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+            visibility: Visibility::Hidden, // Set visibility directly here
+            ..default()
+        })
+        .insert(GameOverButton) // Insert the `GameOverButton` component
+        .with_children(|parent| {
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    "Restart",
+                    TextStyle {
+                        font_size: 20.0,
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                ),
+                ..default()
+            });
+        });
+}
+
+pub fn update_game_over_button(
+    mut commands: Commands,
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor, &Children),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut visibility_params_query: ParamSet<(
+        Query<&mut Visibility, With<GameOverText>>,
+        Query<&mut Visibility, With<GameOverButton>>,
+    )>,
+    win_query: Query<&Window, With<PrimaryWindow>>,
+    mut player_query: Query<&mut Transform, With<Player>>,
+    mut text_query: Query<&mut Text>,
+    assets: Res<AssetServer>,
+) {
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query.get_mut(children[0]).unwrap();
+        match *interaction {
+            Interaction::Pressed => {
+                if let Ok(mut game_over_text_visibility) =
+                    visibility_params_query.p0().get_single_mut()
+                {
+                    *game_over_text_visibility = Visibility::Hidden;
+                }
+                if let Ok(mut game_over_button_visibility) =
+                    visibility_params_query.p1().get_single_mut()
+                {
+                    *game_over_button_visibility = Visibility::Hidden;
+                }
+                let texture: Handle<Image> = assets.load("../assets/Spritesheet/heart.png");
+                if let Ok(win) = win_query.get_single() {
+                    spawn_hearts(&mut commands, texture, win);
+                    if let Ok(mut player) = player_query.get_single_mut() {
+                        player.translation.x = 0.;
+                    }
+                }
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::WHITE);
+                text.sections[0].style.color = Color::srgb(0., 0., 0.)
+            }
+            _ => {
+                *color = BackgroundColor(Color::srgb(0.2, 0.2, 0.2));
+                text.sections[0].style.color = Color::WHITE
             }
         }
     }
