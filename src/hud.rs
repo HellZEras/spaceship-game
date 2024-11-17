@@ -23,6 +23,9 @@ pub struct GameOverButton;
 #[derive(Component)]
 pub struct GameOverText;
 
+#[derive(Component)]
+pub struct ScoreText;
+
 pub fn spawn_ammo_icon(commands: &mut Commands, texture: Handle<Image>, win: &Window) {
     commands.spawn((
         SpriteBundle {
@@ -271,4 +274,22 @@ pub fn update_game_over_button(
             }
         }
     }
+}
+pub fn spawn_score_text(commands: &mut Commands) {
+    commands.spawn((
+        TextBundle::from(TextSection::new(
+            "0",
+            TextStyle {
+                font_size: 40.0,
+                ..default()
+            },
+        ))
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            right: Val::Px(15.0),
+            ..default()
+        }),
+        ScoreText,
+    ));
 }

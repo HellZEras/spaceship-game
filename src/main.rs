@@ -66,6 +66,7 @@ fn setup(
     let asteroid_texture = assets.load("../assets/Spritesheet/asteroid.png");
     if let Ok(win) = query.get_single() {
         spawn_game_over_text(&mut commands);
+        spawn_score_text(&mut commands);
         spawn_restart_button(&mut commands);
         spawn_background(&mut commands, win);
         spawn_ammo_text(&mut commands);
@@ -97,6 +98,7 @@ fn loop_logic(
         Query<&mut Visibility, With<AmmoIcon>>,
         Query<&mut Visibility, With<GameOverText>>,
         Query<&mut Visibility, With<GameOverButton>>,
+        Query<(&mut Visibility, &mut Text), With<ScoreText>>,
     )>,
     bullets_query: Query<Entity, With<Fire>>,
     hearts_query: Query<&Heart, With<Heart>>,
@@ -122,6 +124,9 @@ fn loop_logic(
                 {
                     *game_over_button_visibility = Visibility::Hidden;
                 }
+                if let Ok((mut score_visibility, _)) = visibility_queries.p5().get_single_mut() {
+                    *score_visibility = Visibility::Visible;
+                }
             } else {
                 for bullet in bullets_query.iter() {
                     commands.entity(bullet).despawn();
@@ -141,6 +146,12 @@ fn loop_logic(
                     visibility_queries.p4().get_single_mut()
                 {
                     *game_over_button_visibility = Visibility::Visible;
+                }
+                if let Ok((mut score_visibility, mut text)) =
+                    visibility_queries.p5().get_single_mut()
+                {
+                    *score_visibility = Visibility::Hidden;
+                    text.sections[0].value = String::from("0");
                 }
                 for mut asteroid in asteroids_query.iter_mut() {
                     asteroid.translation.y = win.resolution.height() / 2. + 25.;

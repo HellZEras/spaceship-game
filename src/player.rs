@@ -6,8 +6,9 @@ use bevy::{
     prelude::*,
     window::PrimaryWindow,
 };
+use rand::Rng;
 
-use crate::{asteroids::Asteroid, Heart};
+use crate::{asteroids::Asteroid, Heart, ScoreText};
 
 const PLAYER_MOVEMENT_SPEED: f32 = 600.0;
 const SPACESHIP_SIZE: f32 = 80.0;
@@ -73,7 +74,7 @@ pub fn player_inputs(
                 commands.spawn(AudioBundle {
                     source: laser,
                     settings: PlaybackSettings {
-                        volume: Volume::new(0.2),
+                        volume: Volume::new(0.05),
                         ..default()
                     },
                 });
@@ -120,10 +121,22 @@ pub fn fire_logic(
     }
 }
 
-pub fn update_ammunition(mut player_query: Query<&mut Player, With<Player>>) {
+pub fn update_ammunition(
+    mut commands: Commands,
+    mut player_query: Query<&mut Player, With<Player>>,
+    assets: Res<AssetServer>,
+) {
     if let Ok(mut player) = player_query.get_single_mut() {
         if player.ammunition == 0 && player.reload_instant.is_none() {
-            player.reload_instant = Some(Instant::now())
+            player.reload_instant = Some(Instant::now());
+            let reload = assets.load("../assets/reload.ogg");
+            commands.spawn(AudioBundle {
+                source: reload,
+                settings: PlaybackSettings {
+                    speed: 0.3,
+                    ..default()
+                },
+            });
         }
         if let Some(inst) = player.reload_instant {
             if inst.elapsed() > Duration::from_secs(2) {
@@ -170,6 +183,7 @@ pub fn detect_bullet_collision(
     mut commands: Commands,
     bullets_query: Query<(&Transform, Entity), (With<Fire>, Without<Asteroid>)>,
     mut asteroids_query: Query<&mut Transform, (With<Asteroid>, Without<Fire>)>,
+    mut score_query: Query<&mut Text, With<ScoreText>>,
     win_query: Query<&Window, With<PrimaryWindow>>,
     assets: Res<AssetServer>,
 ) {
@@ -189,12 +203,21 @@ pub fn detect_bullet_collision(
                     commands.spawn(AudioBundle {
                         source: explosion.clone(),
                         settings: PlaybackSettings {
-                            volume: Volume::new(0.4),
+                            volume: Volume::new(0.1),
                             ..default()
                         },
                     });
                     commands.entity(bullet.1).despawn();
-                    asteroid.translation.y = win.height() / 2. + 50.
+                    asteroid.translation.y = win.height() / 2. + 50.;
+                    let mut rng = rand::thread_rng();
+                    let x = rng.gen_range(
+                        -win.resolution.width() / 2.0 + 50. ..win.resolution.width() / 2. - 50.,
+                    );
+                    asteroid.translation.x = x;
+                    if let Ok(mut score) = score_query.get_single_mut() {
+                        let value = score.sections[0].value.parse::<i64>().unwrap();
+                        score.sections[0].value = format!("{}", value + 100);
+                    }
                 }
             }
         }
