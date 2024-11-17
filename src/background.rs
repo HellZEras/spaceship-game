@@ -1,5 +1,5 @@
 use std::time::Duration;
-const STAR_FALLING_SPEED: f32 = 50.0;
+const STAR_FALLING_SPEED: f32 = 150.0;
 
 use bevy::{
     math::{vec2, vec3},

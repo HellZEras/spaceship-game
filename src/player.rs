@@ -1,9 +1,7 @@
-use std::{
-    borrow::Borrow,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use bevy::{
+    audio::Volume,
     math::{vec2, vec3},
     prelude::*,
     window::PrimaryWindow,
@@ -26,7 +24,7 @@ pub struct Player {
 }
 
 pub fn spawn_spaceship(commands: &mut Commands, texture: Handle<Image>, win: &Window) {
-    let spawn_point = -1.0 * (win.resolution.height() / 2.1);
+    let spawn_point = -1.0 * (win.resolution.height() / 2.) + 80.;
     commands.spawn((
         SpriteBundle {
             transform: Transform {
@@ -59,6 +57,7 @@ pub fn player_inputs(
     if let Ok(win) = win_query.get_single() {
         if let Ok(mut player) = player_query.get_single_mut() {
             let texture = assets.load("../assets/Spritesheet/fire.png");
+            let laser = assets.load("../assets/Laser.ogg");
             let dt = time.delta_seconds();
             let half_width = win.resolution.width() / 2.0;
 
@@ -71,6 +70,13 @@ pub fn player_inputs(
                 && player.1.click_instant.elapsed() > Duration::from_millis(100)
                 && player.1.ammunition > 0
             {
+                commands.spawn(AudioBundle {
+                    source: laser,
+                    settings: PlaybackSettings {
+                        volume: Volume::new(0.2),
+                        ..default()
+                    },
+                });
                 commands.spawn((
                     SpriteBundle {
                         transform: Transform {
@@ -105,7 +111,7 @@ pub fn fire_logic(
 ) {
     if let Ok(win) = win_query.get_single() {
         for (mut transform, shot) in fire_query.iter_mut() {
-            if transform.translation.y > win.resolution.height() / 2. {
+            if transform.translation.y > win.resolution.height() / 2. - 10. {
                 commands.entity(shot).despawn()
             } else {
                 transform.translation.y += time.delta_seconds() * SHOT_SPEED
@@ -165,18 +171,30 @@ pub fn detect_bullet_collision(
     bullets_query: Query<(&Transform, Entity), (With<Fire>, Without<Asteroid>)>,
     mut asteroids_query: Query<&mut Transform, (With<Asteroid>, Without<Fire>)>,
     win_query: Query<&Window, With<PrimaryWindow>>,
+    assets: Res<AssetServer>,
 ) {
     if let Ok(win) = win_query.get_single() {
+        let explosion = assets.load("../assets/Explosion.ogg");
         for bullet in bullets_query.iter() {
-            let bullet_coords = bullet.0.translation.xy();
-            let bullet_radius = bullet.0.scale.x / 2.;
+            let bullet_coords = bullet.0.translation.truncate();
+            let bullet_radius = 10.;
+
             for mut asteroid in asteroids_query.iter_mut() {
                 let asteroid_coords = asteroid.translation.truncate();
-                let asteroid_radius = asteroid.scale.x / 2.;
+                let asteroid_radius = 25.;
+
                 let distance = bullet_coords.distance(asteroid_coords);
+
                 if distance < bullet_radius + asteroid_radius {
+                    commands.spawn(AudioBundle {
+                        source: explosion.clone(),
+                        settings: PlaybackSettings {
+                            volume: Volume::new(0.4),
+                            ..default()
+                        },
+                    });
                     commands.entity(bullet.1).despawn();
-                    asteroid.translation.y = win.height() / 2. + 10.
+                    asteroid.translation.y = win.height() / 2. + 50.
                 }
             }
         }

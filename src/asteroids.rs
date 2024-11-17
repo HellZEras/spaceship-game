@@ -17,7 +17,7 @@ pub fn spawn_asteroids(commands: &mut Commands, texture: Handle<Image>, win: &Wi
     let mut rng = rand::thread_rng();
     let y = win.height();
 
-    for _ in 0..40 {
+    for _ in 0..20 {
         let x = rng.gen_range(-win.width() / 2.0 + 20.0..win.width() / 2.0 - 20.0);
         let falling_speed = rng.gen_range(150.0..400.0);
         let falling_x = rng.gen_range(-40.0..40.0);
