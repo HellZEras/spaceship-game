@@ -100,7 +100,7 @@ fn loop_logic(
         Query<&mut Visibility, With<GameOverButton>>,
         Query<(&mut Visibility, &mut Text), With<ScoreText>>,
     )>,
-    bullets_query: Query<Entity, With<Fire>>,
+    bullets_query: Query<Entity, With<Bullet>>,
     hearts_query: Query<&Heart, With<Heart>>,
     mut asteroids_query: Query<&mut Transform, With<Asteroid>>,
     win_query: Query<&Window, With<PrimaryWindow>>,

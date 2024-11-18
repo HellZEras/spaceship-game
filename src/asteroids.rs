@@ -1,9 +1,8 @@
-use bevy::{
-    math::{vec2, vec3},
-    prelude::*,
-    window::PrimaryWindow,
-};
+use bevy::{math::vec3, prelude::*, window::PrimaryWindow};
 use rand::Rng;
+
+pub const ASTEROID_SIZE: f32 = 50.;
+
 #[derive(Component)]
 pub struct Asteroid;
 
@@ -29,7 +28,7 @@ pub fn spawn_asteroids(commands: &mut Commands, texture: Handle<Image>, win: &Wi
                     ..default()
                 },
                 sprite: Sprite {
-                    custom_size: Some(vec2(50.0, 50.0)),
+                    custom_size: Some(Vec2::splat(ASTEROID_SIZE)),
                     ..default()
                 },
                 texture: texture.clone(),

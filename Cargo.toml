@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.14.2", features = ["default_font", "dynamic_linking"] }
 rand = "0.8.5"
-
+log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
 [profile.release]
 codegen-units = 1
 lto = "thin"

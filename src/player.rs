@@ -1,21 +1,21 @@
 use std::time::{Duration, Instant};
 
-use bevy::{
-    audio::Volume,
-    math::{vec2, vec3},
-    prelude::*,
-    window::PrimaryWindow,
-};
+use bevy::{audio::Volume, math::vec3, prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
-use crate::{asteroids::Asteroid, Heart, ScoreText};
+use crate::{
+    asteroids::{Asteroid, ASTEROID_SIZE},
+    Heart, ScoreText,
+};
 
 const PLAYER_MOVEMENT_SPEED: f32 = 600.0;
 const SPACESHIP_SIZE: f32 = 80.0;
 const SHOT_SPEED: f32 = 400.0;
+const AMMUNITION_COUNT: usize = 60;
+const BULLET_SIZE: f32 = 20.;
 
 #[derive(Component)]
-pub struct Fire;
+pub struct Bullet;
 
 #[derive(Component)]
 pub struct Player {
@@ -33,7 +33,7 @@ pub fn spawn_spaceship(commands: &mut Commands, texture: Handle<Image>, win: &Wi
                 ..default()
             },
             sprite: Sprite {
-                custom_size: Some(vec2(SPACESHIP_SIZE, SPACESHIP_SIZE)),
+                custom_size: Some(Vec2::splat(SPACESHIP_SIZE)),
                 ..default()
             },
             texture,
@@ -42,7 +42,7 @@ pub fn spawn_spaceship(commands: &mut Commands, texture: Handle<Image>, win: &Wi
         Player {
             click_instant: Instant::now(),
             reload_instant: None,
-            ammunition: 60,
+            ammunition: AMMUNITION_COUNT,
         },
     ));
 }
@@ -85,13 +85,13 @@ pub fn player_inputs(
                             ..default()
                         },
                         sprite: Sprite {
-                            custom_size: Some(vec2(20., 20.)),
+                            custom_size: Some(Vec2::splat(BULLET_SIZE)),
                             ..default()
                         },
                         texture,
                         ..default()
                     },
-                    Fire,
+                    Bullet,
                 ));
                 player.1.click_instant = Instant::now();
                 player.1.ammunition -= 1;
@@ -105,7 +105,7 @@ pub fn player_inputs(
 }
 
 pub fn fire_logic(
-    mut fire_query: Query<(&mut Transform, Entity), With<Fire>>,
+    mut fire_query: Query<(&mut Transform, Entity), With<Bullet>>,
     mut commands: Commands,
     win_query: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
@@ -181,8 +181,8 @@ pub fn detect_player_collision(
 
 pub fn detect_bullet_collision(
     mut commands: Commands,
-    bullets_query: Query<(&Transform, Entity), (With<Fire>, Without<Asteroid>)>,
-    mut asteroids_query: Query<&mut Transform, (With<Asteroid>, Without<Fire>)>,
+    bullets_query: Query<(&Transform, Entity), (With<Bullet>, Without<Asteroid>)>,
+    mut asteroids_query: Query<&mut Transform, (With<Asteroid>, Without<Bullet>)>,
     mut score_query: Query<&mut Text, With<ScoreText>>,
     win_query: Query<&Window, With<PrimaryWindow>>,
     assets: Res<AssetServer>,
@@ -191,11 +191,11 @@ pub fn detect_bullet_collision(
         let explosion = assets.load("../assets/Explosion.ogg");
         for bullet in bullets_query.iter() {
             let bullet_coords = bullet.0.translation.truncate();
-            let bullet_radius = 10.;
+            let bullet_radius = BULLET_SIZE / 2.;
 
             for mut asteroid in asteroids_query.iter_mut() {
                 let asteroid_coords = asteroid.translation.truncate();
-                let asteroid_radius = 25.;
+                let asteroid_radius = ASTEROID_SIZE / 2.;
 
                 let distance = bullet_coords.distance(asteroid_coords);
 
