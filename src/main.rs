@@ -1,3 +1,4 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] 
 use asteroids::replace_asteroids;
 use asteroids::spawn_asteroids;
 use asteroids::update_asteroids;
