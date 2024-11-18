@@ -103,6 +103,7 @@ fn loop_logic(
     bullets_query: Query<Entity, With<Bullet>>,
     hearts_query: Query<&Heart, With<Heart>>,
     mut asteroids_query: Query<&mut Transform, With<Asteroid>>,
+    mut player_query: Query<&mut Player, With<Player>>,
     win_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     if let Ok(win) = win_query.get_single() {
@@ -128,6 +129,9 @@ fn loop_logic(
                     *score_visibility = Visibility::Visible;
                 }
             } else {
+                if let Ok(mut player) = player_query.get_single_mut() {
+                    player.ammunition = 60;
+                }
                 for bullet in bullets_query.iter() {
                     commands.entity(bullet).despawn();
                 }
